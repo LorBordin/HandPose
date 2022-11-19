@@ -49,26 +49,7 @@ def create_density_maps(peak_coords: tf.Tensor, grid_dim: int):
     pdfs *= mask
     
     return pdfs
-
-
-def sum_density_maps(pdfs):
-    """ 
-        Sums together multiple density maps in a whistful way.
-
-        Parameters
-        ----------
-        pdfs: tf.Tensor
-            Density maps of shape (grid_dim ** 2, n_joints).
-
-        Returns
-        -------
-        pdf: tf.Tensor
-            Multi peaked density map of shape (grid_dim ** 2, 1).
-    """
-    pdf = tf.math.reduce_sum(pdfs, axis=-1)
-    pdf = tf.where(pdf>1.0, 1.0, pdf)
-    return tf.expand_dims(pdf, axis=-1)
-
+    
 
 def crop_roi(
         img, 

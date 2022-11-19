@@ -153,7 +153,7 @@ def pad_and_augment(
     return img, c_kpts, c_cntrs
 
 
-def create_labels(c_kpts, c_cntrs, grid_dim):
+def create_labels(c_kpts, c_cntrs, grid_dim, heatmap_type="keypoints"):
     """ Creates the labels use for training. Returns two types of labels:
     i.  keypoints normalised coordinates
     ii. Probability maps for the person centres and the keypoints
@@ -166,6 +166,9 @@ def create_labels(c_kpts, c_cntrs, grid_dim):
         Decoded centers (normalised) coordinates.
     grid_dim : int
         Size of the pdf. Must be equal to the FPN output.
+    heatmap_type : str
+        Type of heatmap to be returned. Options: 'keypoints', 'handcenter'.
+        By default set to 'keypoints'.
 
     Returns
     -------
@@ -182,15 +185,12 @@ def create_labels(c_kpts, c_cntrs, grid_dim):
 
     ### AUXILIARY LABELS ###
     
-    # create the body centres map
-    centres_heatmap = sum_density_maps(
-        create_density_maps(c_cntrs, grid_dim)
-        )
-
-    # create the joint heatmaps
-    kpts_heatmaps = create_density_maps(c_kpts, grid_dim)
-    
-    y_pdfs = tf.concat([centres_heatmap, kpts_heatmaps], axis=-1)
+    if heatmap_type == "handcenter":
+        # create the body centres map
+        y_pdfs = create_density_maps(c_cntrs, grid_dim)
+    elif heatmap_type == "handcenter":
+        # create the joint heatmaps
+        y_pdfs = create_density_maps(c_kpts, grid_dim)
     
     return y_coords, y_pdfs
 
@@ -236,8 +236,9 @@ def load_TFRecords_dataset(
     target_size=(128,128),           
     grid_dim = 32,
     augmentations=[], 
+    heatmap_type="keypoints",
     roi_thresh=.1,
-    debug=False,
+    shuffle=True,
     ):
     """
         Datasetloader. Operations:
@@ -264,8 +265,13 @@ def load_TFRecords_dataset(
         Size of the probability density maps. Must be equal to the FPN output.
     augmentations : list[function]
         List of image augmetations, by default to '[]'.
+    heatmap_type : str
+        Type of heatmap to be returned. Options: 'keypoints', 'handcenter'.
+        By default set to 'keypoints'.
     roi_thresh : float
         Probability to apply the 'focus_on_roi' augmentation, by default to -1.
+    shuffle : bool
+        If True shuffles the sample before batching.
     
     Returns
     -------
@@ -289,17 +295,18 @@ def load_TFRecords_dataset(
     mk_labels = lambda img, kpts, cntrs: (img, create_labels(
         kpts,
         cntrs, 
-        grid_dim)
+        grid_dim,
+        heatmap_type=heatmap_type)
         )
 
     # create the dataset
     raw_ds = decode_samples(filePaths, img_size, n_readers)
     output_ds = raw_ds.map(preprocess, num_parallel_calls=AUTOTUNE)
     output_ds = output_ds.map(mk_labels, num_parallel_calls=AUTOTUNE)
-    if not debug:
-        output_ds = output_ds.shuffle(buffer_size=1000).batch(batch_size)
-    else: 
+    if shuffle:
         output_ds = output_ds.batch(batch_size)
+    else: 
+        output_ds = output_ds.shuffle(buffer_size=1000).batch(batch_size)
     output_ds = output_ds.prefetch(AUTOTUNE)
     
     return output_ds

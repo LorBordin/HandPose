@@ -83,14 +83,14 @@ class HandNet(tf.keras.Model):
 
 if __name__=="__main__":
 
-    model = HandNet((416, 416, 3), (32, 16, 8), 17)
+    model = HandNet((128, 128, 3), (16, 8, 4), 21, alpha=.25, use_postproc=True)
     print(model.summary())
     print()
     
     import numpy as np
     import time
 
-    img = (np.random.randint(0, 255, (1, 416, 416, 3)) / 255).astype(np.float32)
+    img = (np.random.randint(0, 255, (1, 128, 128, 3)) / 255).astype(np.float32)
     
     start = time.time()
     for i in range(100):
