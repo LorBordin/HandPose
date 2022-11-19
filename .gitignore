@@ -1,0 +1,9 @@
+dataset/
+**/__pycache__/
+__pycache__/
+handpose/__pycache__/
+dev_utils/__pycache__/
+
+.vscode/
+.ipynb_checkpoints/
+./saved_models/
